@@ -5,15 +5,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 
-export default function WorkoutScreen() {
+export default function PlanScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedText type="title" style={styles.title}>
-          Workout
+          Plan
         </ThemedText>
         <ThemedText style={styles.placeholder}>
-          Log and track your workouts
+          Your personalized training plan
         </ThemedText>
       </SafeAreaView>
     </ThemedView>
