@@ -225,6 +225,14 @@ export function useSplitEditor(splitId: string) {
     [splitId]
   );
 
+  const handleSave = useCallback(async () => {
+    if (!split) return;
+    nameTimers.current.forEach(t => clearTimeout(t));
+    nameTimers.current.clear();
+    await updateSplit(splitId, { name: split.name });
+    await Promise.all(split.days.map(d => updateSplitDay(d.id, { name: d.name })));
+  }, [split, splitId]);
+
   const handleRemoveExercise = useCallback(
     async (splitDayExerciseId: string) => {
       try {
@@ -251,6 +259,7 @@ export function useSplitEditor(splitId: string) {
   return {
     split,
     loading,
+    save: handleSave,
     updateName: handleUpdateName,
     updateWorkoutsPerWeek: handleUpdateWorkoutsPerWeek,
     setAsActive: handleSetAsActive,

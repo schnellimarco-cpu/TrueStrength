@@ -9,7 +9,7 @@ import {
 import type { CalendarDay, UpcomingWorkout } from '@/types/calendar';
 
 export function useWorkoutPlanning(activeWorkoutDate: string | null) {
-  const { activeSplit } = useActiveSplit();
+  const { activeSplit, refresh: refreshActiveSplit } = useActiveSplit();
   const { recentWorkouts } = useWorkoutHistory();
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -44,5 +44,6 @@ export function useWorkoutPlanning(activeWorkoutDate: string | null) {
     weekOffset,
     setWeekOffset,
     activeSplit: activeSplit ?? null,
+    refresh: refreshActiveSplit,
   };
 }

@@ -249,13 +249,15 @@ export default function WorkoutHubScreen() {
     weekOffset,
     setWeekOffset,
     activeSplit,
+    refresh: refreshActiveSplit,
   } = useWorkoutPlanning(activeDate);
 
   useFocusEffect(
     useCallback(() => {
       refreshHub();
       refreshHistory();
-    }, [refreshHub, refreshHistory])
+      refreshActiveSplit();
+    }, [refreshHub, refreshHistory, refreshActiveSplit])
   );
 
   const loading = hubLoading || histLoading;

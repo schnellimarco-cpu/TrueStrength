@@ -7,6 +7,7 @@ import {
   Card,
   Divider,
   IconButton,
+  PrimaryButton,
   ScreenContainer,
   SectionHeader,
   SmallActionButton,
@@ -35,6 +36,7 @@ export default function SplitEditorScreen() {
   const {
     split,
     loading,
+    save,
     updateName,
     updateWorkoutsPerWeek,
     setAsActive,
@@ -51,6 +53,7 @@ export default function SplitEditorScreen() {
   const [exercisePickerDayId, setExercisePickerDayId] = useState<string | null>(null);
   const [newDayName, setNewDayName] = useState('');
   const [addingDay, setAddingDay] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!id) {
     return (
@@ -103,6 +106,28 @@ export default function SplitEditorScreen() {
         },
       ]
     );
+  }
+
+  async function handleSave() {
+    if (!split) return;
+    if (!split.name.trim()) {
+      Alert.alert('Name Required', 'Please enter a name for your split.');
+      return;
+    }
+    if (split.days.length === 0) {
+      Alert.alert('Add a Training Day', 'Your split needs at least one training day.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await save();
+      router.replace('/explore');
+    } catch (e) {
+      console.error('[SplitEditorScreen] save error:', e);
+      Alert.alert('Error', 'Could not save split. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSetActive() {
@@ -404,6 +429,14 @@ export default function SplitEditorScreen() {
             </View>
           </Card>
         )}
+
+        <PrimaryButton
+          label="Save Split"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving}
+          fullWidth
+        />
 
         <Divider />
 

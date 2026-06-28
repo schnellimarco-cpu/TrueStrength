@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getOrCreateSession } from '@/lib/auth';
 import { getActiveSplit } from '@/lib/split-service';
 import type { TrainingSplit } from '@/types/splits';
@@ -24,6 +24,8 @@ export function useActiveSplit() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   return { activeSplit, loading, error, refresh };
 }
