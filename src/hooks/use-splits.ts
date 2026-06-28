@@ -36,8 +36,10 @@ export function useSplits() {
 
   const createSplit = useCallback(
     async (input: CreateSplitInput): Promise<TrainingSplit> => {
-      if (!userId) throw new Error('Not authenticated');
-      const split = await createSplitService(userId, input);
+      const uid = userId ?? (await getOrCreateSession());
+      if (!uid) throw new Error('Not authenticated');
+      if (!userId) setUserId(uid);
+      const split = await createSplitService(uid, input);
       setSplits(prev => [split, ...prev]);
       return split;
     },
@@ -51,8 +53,10 @@ export function useSplits() {
 
   const setActive = useCallback(
     async (splitId: string) => {
-      if (!userId) throw new Error('Not authenticated');
-      await setActiveSplitService(userId, splitId);
+      const uid = userId ?? (await getOrCreateSession());
+      if (!uid) throw new Error('Not authenticated');
+      if (!userId) setUserId(uid);
+      await setActiveSplitService(uid, splitId);
       setSplits(prev =>
         prev.map(s => ({ ...s, isActive: s.id === splitId }))
       );

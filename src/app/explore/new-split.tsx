@@ -55,12 +55,14 @@ export default function NewSplitScreen() {
 
   const [selectedTemplate, setSelectedTemplate] = useState<Template>(TEMPLATES[0]);
   const [name, setName] = useState(TEMPLATES[0].defaultName);
+  const [workoutsPerWeek, setWorkoutsPerWeek] = useState(TEMPLATES[0].defaultWorkoutsPerWeek);
   const [setAsActive, setSetAsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
   function handleSelectTemplate(template: Template) {
     setSelectedTemplate(template);
     setName(template.defaultName);
+    setWorkoutsPerWeek(template.defaultWorkoutsPerWeek);
   }
 
   async function handleCreate() {
@@ -74,7 +76,7 @@ export default function NewSplitScreen() {
       const split = await createSplit({
         name: name.trim(),
         type: selectedTemplate.type,
-        workoutsPerWeek: selectedTemplate.defaultWorkoutsPerWeek,
+        workoutsPerWeek,
       });
 
       if (setAsActive) {
@@ -152,6 +154,24 @@ export default function NewSplitScreen() {
         />
       </View>
 
+      {/* Frequency stepper */}
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>WORKOUTS / WEEK</Text>
+        <View style={[styles.stepperRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Pressable
+            onPress={() => setWorkoutsPerWeek(prev => Math.max(1, prev - 1))}
+            style={[styles.stepperBtn, { borderColor: theme.border }]}>
+            <Text style={[styles.stepperBtnLabel, { color: theme.text }]}>−</Text>
+          </Pressable>
+          <Text style={[styles.stepperValue, { color: theme.text }]}>{workoutsPerWeek}</Text>
+          <Pressable
+            onPress={() => setWorkoutsPerWeek(prev => Math.min(7, prev + 1))}
+            style={[styles.stepperBtn, { borderColor: theme.border }]}>
+            <Text style={[styles.stepperBtnLabel, { color: theme.text }]}>+</Text>
+          </Pressable>
+        </View>
+      </View>
+
       {/* Set as active toggle */}
       <Pressable
         onPress={() => setSetAsActive(prev => !prev)}
@@ -224,6 +244,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     fontSize: 17,
     lineHeight: 22,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    overflow: 'hidden',
+    height: 48,
+  },
+  stepperBtn: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderLeftWidth: 1,
+  },
+  stepperBtnLabel: {
+    fontSize: 22,
+    fontWeight: '300',
+    lineHeight: 28,
+  },
+  stepperValue: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: 26,
   },
   toggleRow: {
     flexDirection: 'row',

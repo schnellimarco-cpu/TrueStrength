@@ -36,6 +36,7 @@ export default function SplitEditorScreen() {
     split,
     loading,
     updateName,
+    updateWorkoutsPerWeek,
     setAsActive,
     addDay,
     removeDay,
@@ -225,9 +226,33 @@ export default function SplitEditorScreen() {
           <View style={[styles.metaDivider, { backgroundColor: theme.border }]} />
           <View style={styles.metaItem}>
             <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>FREQUENCY</Text>
-            <Text style={[styles.metaValue, { color: theme.text }]}>
-              {split.workoutsPerWeek}× / week
-            </Text>
+            <View style={styles.stepperRow}>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    await updateWorkoutsPerWeek(split.workoutsPerWeek - 1);
+                  } catch {
+                    Alert.alert('Error', 'Could not update frequency.');
+                  }
+                }}
+                style={[styles.stepperBtn, { borderColor: theme.border }]}>
+                <Text style={[styles.stepperBtnLabel, { color: theme.text }]}>−</Text>
+              </Pressable>
+              <Text style={[styles.stepperValue, { color: theme.text }]}>
+                {split.workoutsPerWeek}×
+              </Text>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    await updateWorkoutsPerWeek(split.workoutsPerWeek + 1);
+                  } catch {
+                    Alert.alert('Error', 'Could not update frequency.');
+                  }
+                }}
+                style={[styles.stepperBtn, { borderColor: theme.border }]}>
+                <Text style={[styles.stepperBtnLabel, { color: theme.text }]}>+</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -449,6 +474,32 @@ const styles = StyleSheet.create({
   },
   metaValue: {
     ...Typography.headline,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.one,
+  },
+  stepperBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperBtnLabel: {
+    fontSize: 18,
+    fontWeight: '300',
+    lineHeight: 22,
+  },
+  stepperValue: {
+    minWidth: 36,
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+    paddingHorizontal: Spacing.two,
   },
   dayHeader: {
     flexDirection: 'row',

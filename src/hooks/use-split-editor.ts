@@ -211,6 +211,20 @@ export function useSplitEditor(splitId: string) {
     [split]
   );
 
+  const handleUpdateWorkoutsPerWeek = useCallback(
+    async (value: number) => {
+      if (value < 1 || value > 7) return;
+      setSplit(prev => (prev ? { ...prev, workoutsPerWeek: value } : prev));
+      try {
+        await updateSplit(splitId, { workoutsPerWeek: value });
+      } catch (e) {
+        console.error('[useSplitEditor] updateWorkoutsPerWeek error:', e);
+        throw e;
+      }
+    },
+    [splitId]
+  );
+
   const handleRemoveExercise = useCallback(
     async (splitDayExerciseId: string) => {
       try {
@@ -238,6 +252,7 @@ export function useSplitEditor(splitId: string) {
     split,
     loading,
     updateName: handleUpdateName,
+    updateWorkoutsPerWeek: handleUpdateWorkoutsPerWeek,
     setAsActive: handleSetAsActive,
     addDay: handleAddDay,
     removeDay: handleRemoveDay,
