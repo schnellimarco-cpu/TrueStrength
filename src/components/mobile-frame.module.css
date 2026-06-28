@@ -1,0 +1,23 @@
+.viewport {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background: #0a0a0a;
+  justify-content: center;
+  align-items: center;
+}
+
+.phone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(90vw, calc(90vh * 9 / 16));
+  height: min(90vh, calc(90vw * 16 / 9));
+  border-radius: 40px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 10px #1e1e1e,
+    0 0 0 12px #3a3a3a,
+    0 40px 100px rgba(0, 0, 0, 0.95);
+  flex-shrink: 0;
+}
