@@ -117,6 +117,11 @@ export default function ProfileScreen() {
             fullWidth
           />
         ) : null}
+        <SecondaryButton
+          label="Analytics Debug"
+          onPress={() => router.push('/profile/analytics-debug')}
+          fullWidth
+        />
       </View>
     </ScreenContainer>
   );

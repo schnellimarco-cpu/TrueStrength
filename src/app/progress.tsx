@@ -16,8 +16,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing, Typography } from '@/constants/theme';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useTheme } from '@/hooks/use-theme';
-import { formatVolume, pctChange } from '@/lib/analytics';
-import type { MuscleGroupVolume, ExerciseBest } from '@/types/analytics';
+import { formatVolume, pctChange, getTopCoachInsights } from '@/lib/analytics';
+import type { MuscleGroupVolume, ExerciseBest, AnalyticsInsight } from '@/types/analytics';
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -121,6 +121,24 @@ export default function ProgressScreen() {
       ...Typography.subhead,
       color: theme.accent,
       marginTop: Spacing.one,
+    },
+    insightRow: {
+      paddingVertical: Spacing.two,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    insightRowLast: {
+      borderBottomWidth: 0,
+    },
+    insightTitle: {
+      ...Typography.subhead,
+      color: theme.text,
+      fontWeight: '600' as const,
+      marginBottom: Spacing.one,
+    },
+    insightDesc: {
+      ...Typography.footnote,
+      color: theme.textSecondary,
     },
     content: {
       gap: Spacing.three,
@@ -294,6 +312,27 @@ export default function ProgressScreen() {
           </Card>
         </>
       )}
+
+      {/* Top Insights */}
+      {snapshot.insights.length > 0 && (() => {
+        const topInsights = getTopCoachInsights(snapshot, 3);
+        return (
+          <>
+            <SectionHeader title="Insights" />
+            <Card>
+              {topInsights.map((insight: AnalyticsInsight, idx: number) => (
+                <View
+                  key={insight.id}
+                  style={[styles.insightRow, idx === topInsights.length - 1 && styles.insightRowLast]}
+                >
+                  <ThemedText style={styles.insightTitle}>{insight.title}</ThemedText>
+                  <ThemedText style={styles.insightDesc}>{insight.description}</ThemedText>
+                </View>
+              ))}
+            </Card>
+          </>
+        );
+      })()}
 
       {/* Streak info */}
       {consistency.currentStreak >= 2 && (
