@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -13,12 +13,11 @@ import {
   StatCard,
 } from '@/components/ui';
 import { ThemedText } from '@/components/themed-text';
-import { BorderRadius, Spacing, Typography } from '@/constants/theme';
-import { useBodyweight } from '@/hooks/use-bodyweight';
-import { useProgress } from '@/hooks/use-progress';
+import { Spacing, Typography } from '@/constants/theme';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useTheme } from '@/hooks/use-theme';
-import { formatVolume, pctChange } from '@/lib/progress-service';
-import type { MuscleGroupProgress, PersonalRecordPreview } from '@/types/progress';
+import { formatVolume, pctChange } from '@/lib/analytics';
+import type { MuscleGroupVolume, ExerciseBest } from '@/types/analytics';
 
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -29,26 +28,13 @@ function relativeDate(iso: string): string {
 
 export default function ProgressScreen() {
   const theme = useTheme();
-  const { overview, muscleGroups, personalRecords, loading, refresh } = useProgress();
-  const { currentWeight, history } = useBodyweight();
+  const { snapshot, loading, refresh } = useAnalytics();
 
   useFocusEffect(
     useCallback(() => {
       refresh();
     }, [refresh])
   );
-
-  const weightTrend = useMemo(() => {
-    const cutoff = Date.now() - 30 * 86400000;
-    const recent = history.filter(e => new Date(e.measuredAt).getTime() >= cutoff);
-    if (recent.length < 2) return null;
-    const delta = recent[0].weightKg - recent[recent.length - 1].weightKg;
-    const sign = delta >= 0 ? '▲ +' : '▼ ';
-    return `${sign}${Math.abs(delta).toFixed(1)} kg this month`;
-  }, [history]);
-
-  const weekChange = overview ? pctChange(overview.currentWeekVolume, overview.previousWeekVolume) : null;
-  const monthChange = overview ? pctChange(overview.currentMonthVolume, overview.previousMonthVolume) : null;
 
   const styles = StyleSheet.create({
     subtitle: {
@@ -148,7 +134,7 @@ export default function ProgressScreen() {
     },
   });
 
-  if (loading && !overview) {
+  if (loading && !snapshot) {
     return (
       <ScreenContainer>
         <SectionHeader title="Progress" size="large" />
@@ -156,7 +142,9 @@ export default function ProgressScreen() {
     );
   }
 
-  if (!overview || overview.totalWorkouts === 0) {
+  const totalWorkouts = snapshot?.metrics.consistency.totalCompletedWorkouts ?? 0;
+
+  if (!snapshot || totalWorkouts === 0) {
     return (
       <ScreenContainer contentStyle={styles.emptyContent}>
         <SectionHeader title="Progress" size="large" />
@@ -174,6 +162,14 @@ export default function ProgressScreen() {
     );
   }
 
+  const { volume, bodyweight, personalRecords, consistency } = snapshot.metrics;
+  const muscleGroups = volume.volumeByMuscleGroup;
+  const records = personalRecords.topRecords;
+  const currentWeight = bodyweight.currentEntry;
+
+  const weekChange = pctChange(volume.currentWeekVolume, volume.previousWeekVolume);
+  const monthChange = pctChange(volume.currentMonthVolume, volume.previousMonthVolume);
+
   return (
     <ScreenContainer scrollable contentStyle={styles.content}>
       <SectionHeader title="Progress" size="large" />
@@ -182,21 +178,14 @@ export default function ProgressScreen() {
       {/* Overview grid */}
       <View style={styles.grid}>
         <View style={styles.gridCell}>
-          <StatCard
-            value={overview.totalWorkouts}
-            label="Workouts"
-          />
+          <StatCard value={totalWorkouts} label="Workouts" />
+        </View>
+        <View style={styles.gridCell}>
+          <StatCard value={formatVolume(volume.totalVolume)} label="Total Volume" unit="kg" />
         </View>
         <View style={styles.gridCell}>
           <StatCard
-            value={formatVolume(overview.totalVolume)}
-            label="Total Volume"
-            unit="kg"
-          />
-        </View>
-        <View style={styles.gridCell}>
-          <StatCard
-            value={formatVolume(overview.currentWeekVolume)}
+            value={formatVolume(volume.currentWeekVolume)}
             label="This Week"
             unit="kg"
             delta={weekChange?.delta}
@@ -205,7 +194,7 @@ export default function ProgressScreen() {
         </View>
         <View style={styles.gridCell}>
           <StatCard
-            value={formatVolume(overview.currentMonthVolume)}
+            value={formatVolume(volume.currentMonthVolume)}
             label="This Month"
             unit="kg"
             delta={monthChange?.delta}
@@ -219,7 +208,7 @@ export default function ProgressScreen() {
         <>
           <SectionHeader title="Most Trained" />
           <Card>
-            {muscleGroups.slice(0, 5).map((mg: MuscleGroupProgress, idx) => (
+            {muscleGroups.slice(0, 5).map((mg: MuscleGroupVolume, idx) => (
               <View
                 key={mg.muscleGroup}
                 style={[
@@ -254,8 +243,8 @@ export default function ProgressScreen() {
             <ThemedText style={styles.bwUpdated}>
               Last updated: {relativeDate(currentWeight.measuredAt)}
             </ThemedText>
-            {weightTrend ? (
-              <ThemedText style={styles.bwTrend}>{weightTrend}</ThemedText>
+            {bodyweight.trend30DayLabel ? (
+              <ThemedText style={styles.bwTrend}>{bodyweight.trend30DayLabel}</ThemedText>
             ) : null}
           </Card>
           <SecondaryButton
@@ -280,17 +269,14 @@ export default function ProgressScreen() {
       )}
 
       {/* Personal Records */}
-      {personalRecords.length > 0 && (
+      {records.length > 0 && (
         <>
           <SectionHeader title="Personal Records" />
           <Card>
-            {personalRecords.map((pr: PersonalRecordPreview, idx) => (
+            {records.map((pr: ExerciseBest, idx) => (
               <View
                 key={pr.exerciseName}
-                style={[
-                  styles.prRow,
-                  idx === personalRecords.length - 1 && styles.prRowLast,
-                ]}
+                style={[styles.prRow, idx === records.length - 1 && styles.prRowLast]}
               >
                 <ThemedText style={styles.prName}>{pr.exerciseName}</ThemedText>
                 <ThemedText style={styles.prWeight}>
@@ -307,6 +293,13 @@ export default function ProgressScreen() {
             ))}
           </Card>
         </>
+      )}
+
+      {/* Streak info */}
+      {consistency.currentStreak >= 2 && (
+        <ThemedText style={[styles.subtitle, { textAlign: 'center' }]}>
+          🔥 {consistency.currentStreak}-day training streak
+        </ThemedText>
       )}
     </ScreenContainer>
   );
