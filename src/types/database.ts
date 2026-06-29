@@ -86,10 +86,13 @@ export type DbBodyweightEntry = {
   id: string;
   user_id: string;
   weight_kg: number;
+  unit: 'kg' | 'lbs';
   date: string;
+  measured_at: string;
   source: string;
   sync_status: SyncStatus;
   created_at: string;
+  updated_at: string;
 };
 
 export type DbSplitType = 'push_pull_legs' | 'upper_lower' | 'full_body' | 'custom';
