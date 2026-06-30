@@ -1,4 +1,5 @@
 import type { BodyweightEntry } from './bodyweight';
+import type { StrengthScoreSnapshot } from './strength-score';
 
 // ─── Layer 1: Raw Data ────────────────────────────────────────────────────────
 
@@ -142,6 +143,7 @@ export type AnalyticsSnapshot = {
     personalRecords: PersonalRecordMetrics;
   };
   insights: AnalyticsInsight[];
+  strengthScore: StrengthScoreSnapshot;
 };
 
 // ─── Selectors ────────────────────────────────────────────────────────────────

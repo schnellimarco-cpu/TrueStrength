@@ -5,9 +5,9 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type StrengthScoreCardProps = {
-  value: number;
-  weeklyChange: string;
-  ninetyDayChange: string;
+  value: number | null;
+  weeklyChange?: string | null;
+  ninetyDayChange?: string | null;
   personalBest?: string;
   trend: string;
 };
@@ -20,6 +20,7 @@ export function StrengthScoreCard({
   trend,
 }: StrengthScoreCardProps) {
   const theme = useTheme();
+  const showStats = weeklyChange != null || ninetyDayChange != null;
 
   return (
     <Card>
@@ -29,23 +30,34 @@ export function StrengthScoreCard({
       </View>
 
       <View style={styles.heroArea}>
-        <Text style={[styles.heroScore, { color: theme.accent }]}>{value}</Text>
+        <Text style={[styles.heroScore, { color: theme.accent }]}>
+          {value != null ? Math.round(value) : '—'}
+        </Text>
         <Text style={[styles.trend, { color: theme.textSecondary }]}>{trend}</Text>
       </View>
 
-      <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={[styles.statValue, { color: theme.accent }]}>{weeklyChange}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>This Week</Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-        <View style={styles.stat}>
-          <Text style={[styles.statValue, { color: theme.accent }]}>{ninetyDayChange}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>90 Days</Text>
-        </View>
-      </View>
+      {showStats && (
+        <>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <View style={styles.statsRow}>
+            {weeklyChange != null && (
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: theme.accent }]}>{weeklyChange}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>This Week</Text>
+              </View>
+            )}
+            {weeklyChange != null && ninetyDayChange != null && (
+              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+            )}
+            {ninetyDayChange != null && (
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: theme.accent }]}>{ninetyDayChange}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>90 Days</Text>
+              </View>
+            )}
+          </View>
+        </>
+      )}
     </Card>
   );
 }

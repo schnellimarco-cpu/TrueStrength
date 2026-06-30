@@ -140,6 +140,20 @@ export default function ProgressScreen() {
       ...Typography.footnote,
       color: theme.textSecondary,
     },
+    ssHero: {
+      alignItems: 'center' as const,
+      paddingVertical: Spacing.two,
+      gap: Spacing.one,
+    },
+    ssScore: {
+      ...Typography.largeTitle,
+      color: theme.accent,
+      fontWeight: '700' as const,
+    },
+    ssLabel: {
+      ...Typography.footnote,
+      color: theme.textSecondary,
+    },
     content: {
       gap: Spacing.three,
       paddingBottom: Spacing.five,
@@ -192,6 +206,49 @@ export default function ProgressScreen() {
     <ScreenContainer scrollable contentStyle={styles.content}>
       <SectionHeader title="Progress" size="large" />
       <ThemedText style={styles.subtitle}>Your strength at a glance</ThemedText>
+
+      {/* Strength Score */}
+      <SectionHeader title="Strength Score" />
+      {snapshot.strengthScore.missingBodyweight ? (
+        <>
+          <EmptyState
+            title="Add bodyweight to unlock"
+            description="Your Strength Score is bodyweight-relative. Add your weight to calculate it."
+            symbol="scalemass.fill"
+          />
+          <PrimaryButton
+            label="Add Weight"
+            onPress={() => router.push('/profile/update-weight')}
+            fullWidth
+          />
+        </>
+      ) : snapshot.strengthScore.overallScore == null ? (
+        <EmptyState
+          title="No valid sets yet"
+          description="Log weight and reps to calculate your Strength Score."
+          symbol="dumbbell.fill"
+        />
+      ) : (
+        <Card>
+          <View style={styles.ssHero}>
+            <ThemedText style={styles.ssScore}>
+              {snapshot.strengthScore.overallScore.toFixed(1)}
+            </ThemedText>
+            <ThemedText style={styles.ssLabel}>
+              DOTS · {snapshot.strengthScore.validExerciseCount} exercise{snapshot.strengthScore.validExerciseCount === 1 ? '' : 's'}
+            </ThemedText>
+          </View>
+          {snapshot.strengthScore.exerciseScores.slice(0, 3).map((s, idx, arr) => (
+            <View
+              key={s.exerciseName}
+              style={[styles.prRow, idx === arr.length - 1 && styles.prRowLast]}
+            >
+              <ThemedText style={styles.prName}>{s.exerciseName}</ThemedText>
+              <ThemedText style={styles.prWeight}>{s.relativeStrengthScore.toFixed(1)}</ThemedText>
+            </View>
+          ))}
+        </Card>
+      )}
 
       {/* Overview grid */}
       <View style={styles.grid}>

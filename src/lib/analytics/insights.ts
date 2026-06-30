@@ -1,4 +1,5 @@
 import type { AnalyticsInsight, AnalyticsSnapshot } from '@/types/analytics';
+import type { StrengthScoreSnapshot } from '@/types/strength-score';
 
 export function generateInsights(metrics: AnalyticsSnapshot['metrics']): AnalyticsInsight[] {
   const insights: AnalyticsInsight[] = [];
@@ -125,6 +126,23 @@ export function generateInsights(metrics: AnalyticsSnapshot['metrics']): Analyti
       title: 'Bodyweight stable',
       description: 'Your bodyweight has remained stable over the past 30 days.',
       metricReference: 'bodyweight.trend30DayDeltaKg',
+    });
+  }
+
+  return insights;
+}
+
+export function generateStrengthScoreInsights(score: StrengthScoreSnapshot): AnalyticsInsight[] {
+  const insights: AnalyticsInsight[] = [];
+
+  if (score.missingBodyweight) {
+    insights.push({
+      id: 'strength-score-missing-bw',
+      category: 'strength',
+      priority: 'medium',
+      title: 'Add bodyweight to unlock Strength Score',
+      description: 'Your Strength Score requires bodyweight data to calculate relative strength.',
+      metricReference: 'strengthScore.missingBodyweight',
     });
   }
 

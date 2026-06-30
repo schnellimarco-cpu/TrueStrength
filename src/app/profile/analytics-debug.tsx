@@ -295,6 +295,34 @@ export default function AnalyticsDebugScreen() {
           <ThemedText style={styles.label}>{ins.description}</ThemedText>
         </Card>
       ))}
+
+      {/* Strength Score */}
+      <SectionHeader title={`Strength Score (${snapshot.strengthScore.formula.toUpperCase()})`} />
+      <Card>
+        <Row
+          label="Overall Score"
+          value={snapshot.strengthScore.overallScore?.toFixed(1) ?? '—'}
+        />
+        <Row
+          label="Valid Exercises"
+          value={String(snapshot.strengthScore.validExerciseCount)}
+        />
+        <Row
+          label="Excluded"
+          value={String(snapshot.strengthScore.excludedExerciseCount)}
+        />
+        <Row
+          label="Missing Bodyweight"
+          value={snapshot.strengthScore.missingBodyweight ? 'Yes' : 'No'}
+        />
+        {snapshot.strengthScore.exerciseScores.slice(0, 10).map(s => (
+          <Row
+            key={s.exerciseName}
+            label={s.exerciseName}
+            value={`${s.relativeStrengthScore.toFixed(1)} · 1RM ${s.bestEstimatedOneRepMax.toFixed(0)} kg @ ${s.bodyweightUsed.toFixed(1)} kg BW`}
+          />
+        ))}
+      </Card>
     </ScreenContainer>
   );
 }
