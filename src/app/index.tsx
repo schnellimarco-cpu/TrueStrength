@@ -6,11 +6,12 @@ import { StrengthScoreCard } from '@/components/home/strength-score-card';
 import { TodayWorkoutCard } from '@/components/home/today-workout-card';
 import { WeeklyProgressCard } from '@/components/home/weekly-progress-card';
 import { RecoveryStreakRow } from '@/components/home/recovery-streak-row';
-import { CoachReportCard } from '@/components/home/coach-report-card';
+import { CoachCard } from '@/components/home/coach-card';
 import { QuickActions } from '@/components/home/quick-actions';
 import { ScreenContainer } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { getCoachRecommendations } from '@/lib/analytics';
 
 const DATA = {
   userName: 'Marco',
@@ -18,11 +19,6 @@ const DATA = {
   weeklyProgress: { completed: 3, total: 4 },
   recovery: { status: 'Ready', message: 'You are good to train today' },
   streak: { current: 12, best: 21 },
-  coachReport: {
-    grade: 'B+',
-    recommendation:
-      'Your upper body strength is improving. Keep volume stable and focus on recovery.',
-  },
 } as const;
 
 export default function HomeScreen() {
@@ -43,6 +39,8 @@ export default function HomeScreen() {
       : ss.validExerciseCount === 0
         ? 'Complete a workout to start'
         : `${ss.validExerciseCount} exercise${ss.validExerciseCount === 1 ? '' : 's'} · DOTS`;
+
+  const recommendations = snapshot ? getCoachRecommendations(snapshot) : [];
 
   return (
     <ScreenContainer
@@ -67,11 +65,7 @@ export default function HomeScreen() {
         recovery={DATA.recovery}
         streak={DATA.streak}
       />
-      <CoachReportCard
-        grade={DATA.coachReport.grade}
-        recommendation={DATA.coachReport.recommendation}
-        onViewReport={() => {}}
-      />
+      <CoachCard recommendations={recommendations} loading={!snapshot} />
       <QuickActions
         onStartWorkout={() => {}}
         onLogWeight={() => {}}

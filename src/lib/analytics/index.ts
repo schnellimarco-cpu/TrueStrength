@@ -46,6 +46,7 @@ export async function computeAnalyticsSnapshot(userId: string): Promise<Analytic
 }
 
 export { formatVolume, pctChange } from './utils';
-export { getTopCoachInsights, getWeeklyAnalyticsSummary } from './selectors';
+export { getTopCoachInsights, getWeeklyAnalyticsSummary, getCoachRecommendations } from './selectors';
 export type { AnalyticsSnapshot } from '@/types/analytics';
 export type { StrengthScoreSnapshot } from '@/types/strength-score';
+export type { CoachRecommendation } from '@/types/coach';
