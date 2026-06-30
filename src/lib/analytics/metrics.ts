@@ -12,6 +12,7 @@ import type {
   MuscleGroupVolume,
   AnalyticsSnapshot,
 } from '@/types/analytics';
+import type { BodyweightEntry } from '@/types/bodyweight';
 
 // ─── Volume ───────────────────────────────────────────────────────────────────
 
@@ -26,8 +27,11 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
   let previousWeekVolume = 0;
   let currentMonthVolume = 0;
   let previousMonthVolume = 0;
+  let totalSets = 0;
+  let totalReps = 0;
 
   const muscleMap = new Map<string, { setCount: number; totalVolume: number }>();
+  const exerciseMap = new Map<string, { totalVolume: number; setCount: number }>();
 
   for (const workout of workouts) {
     const completedAt = workout.completedAt ? new Date(workout.completedAt) : null;
@@ -35,6 +39,7 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
 
     for (const ex of workout.exercises) {
       const mg = ex.muscleGroup?.trim();
+      const exName = ex.exerciseName?.trim();
       let exSets = 0;
       let exVolume = 0;
 
@@ -44,6 +49,8 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
         workoutVolume += v;
         exSets++;
         exVolume += v;
+        totalSets++;
+        totalReps += s.reps;
       }
 
       if (mg && exSets > 0) {
@@ -51,6 +58,14 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
         muscleMap.set(mg, {
           setCount: existing.setCount + exSets,
           totalVolume: existing.totalVolume + exVolume,
+        });
+      }
+
+      if (exName && exSets > 0) {
+        const existing = exerciseMap.get(exName) ?? { totalVolume: 0, setCount: 0 };
+        exerciseMap.set(exName, {
+          totalVolume: existing.totalVolume + exVolume,
+          setCount: existing.setCount + exSets,
         });
       }
     }
@@ -73,6 +88,12 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
   const maxSets = entries[0]?.setCount ?? 1;
   entries.forEach(e => { e.fraction = e.setCount / maxSets; });
 
+  const volumeByExercise = Array.from(exerciseMap.entries())
+    .map(([exerciseName, s]) => ({ exerciseName, ...s }))
+    .sort((a, b) => b.totalVolume - a.totalVolume);
+
+  const n = workouts.length;
+
   return {
     totalVolume,
     currentWeekVolume,
@@ -80,6 +101,10 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
     currentMonthVolume,
     previousMonthVolume,
     volumeByMuscleGroup: entries,
+    averageWorkoutVolume: n > 0 ? totalVolume / n : 0,
+    averageSetsPerWorkout: n > 0 ? totalSets / n : 0,
+    averageRepsPerWorkout: n > 0 ? totalReps / n : 0,
+    volumeByExercise,
   };
 }
 
@@ -87,17 +112,32 @@ function computeVolumeMetrics(workouts: AnalyticsRawWorkout[]): VolumeMetrics {
 
 function computeStrengthMetrics(workouts: AnalyticsRawWorkout[]): StrengthMetrics {
   const map = new Map<string, ExerciseBest>();
+  let totalIntensity = 0;
+  let intensitySets = 0;
 
   for (const workout of workouts) {
+    const workoutDate = workout.completedAt?.slice(0, 10) ?? workout.date ?? null;
+
     for (const ex of workout.exercises) {
       const name = ex.exerciseName?.trim();
       if (!name) continue;
 
-      const existing = map.get(name) ?? { exerciseName: name, maxWeightKg: 0, bestEstimated1RM: null };
+      const existing = map.get(name) ?? {
+        exerciseName: name,
+        maxWeightKg: 0,
+        bestEstimated1RM: null,
+        bestSetDate: null,
+      };
 
       for (const s of ex.sets) {
         if (!s.completed) continue;
-        if (s.weightKg > existing.maxWeightKg) existing.maxWeightKg = s.weightKg;
+        totalIntensity += s.weightKg;
+        intensitySets++;
+
+        if (s.weightKg > existing.maxWeightKg) {
+          existing.maxWeightKg = s.weightKg;
+          existing.bestSetDate = workoutDate;
+        }
         if (s.estimated1RM != null) {
           if (existing.bestEstimated1RM == null || s.estimated1RM > existing.bestEstimated1RM) {
             existing.bestEstimated1RM = s.estimated1RM;
@@ -113,24 +153,75 @@ function computeStrengthMetrics(workouts: AnalyticsRawWorkout[]): StrengthMetric
     .filter(e => e.maxWeightKg > 0)
     .sort((a, b) => b.maxWeightKg - a.maxWeightKg);
 
-  return { exerciseBests };
+  return {
+    exerciseBests,
+    averageIntensityKg: intensitySets > 0 ? totalIntensity / intensitySets : null,
+  };
 }
 
 // ─── Bodyweight ───────────────────────────────────────────────────────────────
+
+function buildWorkoutDateWeightMap(
+  workouts: AnalyticsRawWorkout[],
+  history: BodyweightEntry[]
+): Record<string, number> {
+  if (history.length === 0) return {};
+  const dates = [
+    ...new Set(
+      workouts
+        .map(w => w.completedAt?.slice(0, 10) ?? w.date)
+        .filter((d): d is string => !!d)
+    ),
+  ];
+  const result: Record<string, number> = {};
+  for (const date of dates) {
+    const t = new Date(date).getTime();
+    let closest = history[0];
+    let minDiff = Math.abs(new Date(closest.measuredAt).getTime() - t);
+    for (const e of history) {
+      const d = Math.abs(new Date(e.measuredAt).getTime() - t);
+      if (d < minDiff) { minDiff = d; closest = e; }
+    }
+    result[date] = closest.weightKg;
+  }
+  return result;
+}
 
 function computeBodyweightMetrics(raw: AnalyticsRawData): BodyweightMetrics {
   const history = raw.bodyweightHistory;
   const currentEntry = history[0] ?? null;
 
+  const averageBodyweightKg =
+    history.length > 0
+      ? history.reduce((sum, e) => sum + e.weightKg, 0) / history.length
+      : null;
+
+  const allTimeChangeKg =
+    history.length >= 2 ? history[0].weightKg - history[history.length - 1].weightKg : null;
+
   if (history.length < 2) {
-    return { currentEntry, trend30DayDeltaKg: null, trend30DayLabel: null };
+    return {
+      currentEntry,
+      trend30DayDeltaKg: null,
+      trend30DayLabel: null,
+      averageBodyweightKg,
+      allTimeChangeKg,
+      workoutDateWeightMap: buildWorkoutDateWeightMap(raw.workouts, history),
+    };
   }
 
   const cutoff = Date.now() - 30 * 86400000;
   const recent = history.filter(e => new Date(e.measuredAt).getTime() >= cutoff);
 
   if (recent.length < 2) {
-    return { currentEntry, trend30DayDeltaKg: null, trend30DayLabel: null };
+    return {
+      currentEntry,
+      trend30DayDeltaKg: null,
+      trend30DayLabel: null,
+      averageBodyweightKg,
+      allTimeChangeKg,
+      workoutDateWeightMap: buildWorkoutDateWeightMap(raw.workouts, history),
+    };
   }
 
   const delta = recent[0].weightKg - recent[recent.length - 1].weightKg;
@@ -139,31 +230,34 @@ function computeBodyweightMetrics(raw: AnalyticsRawData): BodyweightMetrics {
     currentEntry,
     trend30DayDeltaKg: delta,
     trend30DayLabel: `${sign}${Math.abs(delta).toFixed(1)} kg this month`,
+    averageBodyweightKg,
+    allTimeChangeKg,
+    workoutDateWeightMap: buildWorkoutDateWeightMap(raw.workouts, history),
   };
 }
 
 // ─── Consistency ──────────────────────────────────────────────────────────────
 
-function computeCurrentStreak(workouts: AnalyticsRawWorkout[]): number {
-  if (workouts.length === 0) return 0;
-
-  const uniqueDates = [...new Set(
+function buildUniqueDatesDesc(workouts: AnalyticsRawWorkout[]): string[] {
+  return [...new Set(
     workouts
       .map(w => w.date ?? w.completedAt?.slice(0, 10))
       .filter((d): d is string => !!d)
   )].sort().reverse();
+}
 
-  if (uniqueDates.length === 0) return 0;
+function computeCurrentStreak(uniqueDatesDesc: string[]): number {
+  if (uniqueDatesDesc.length === 0) return 0;
 
   const todayISO = new Date().toISOString().slice(0, 10);
   const yesterdayISO = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
-  if (uniqueDates[0] !== todayISO && uniqueDates[0] !== yesterdayISO) return 0;
+  if (uniqueDatesDesc[0] !== todayISO && uniqueDatesDesc[0] !== yesterdayISO) return 0;
 
   let streak = 1;
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const curr = new Date(uniqueDates[i - 1]).getTime();
-    const prev = new Date(uniqueDates[i]).getTime();
+  for (let i = 1; i < uniqueDatesDesc.length; i++) {
+    const curr = new Date(uniqueDatesDesc[i - 1]).getTime();
+    const prev = new Date(uniqueDatesDesc[i]).getTime();
     if (Math.round((curr - prev) / 86400000) === 1) {
       streak++;
     } else {
@@ -171,6 +265,25 @@ function computeCurrentStreak(workouts: AnalyticsRawWorkout[]): number {
     }
   }
   return streak;
+}
+
+function computeLongestStreak(uniqueDatesDesc: string[]): number {
+  if (uniqueDatesDesc.length === 0) return 0;
+  const asc = [...uniqueDatesDesc].reverse();
+  let longest = 1;
+  let current = 1;
+  for (let i = 1; i < asc.length; i++) {
+    const gap = Math.round(
+      (new Date(asc[i]).getTime() - new Date(asc[i - 1]).getTime()) / 86400000
+    );
+    if (gap === 1) {
+      current++;
+      if (current > longest) longest = current;
+    } else {
+      current = 1;
+    }
+  }
+  return longest;
 }
 
 function computeConsistencyMetrics(raw: AnalyticsRawData): ConsistencyMetrics {
@@ -192,13 +305,30 @@ function computeConsistencyMetrics(raw: AnalyticsRawData): ConsistencyMetrics {
     }
   }
 
+  const uniqueDatesDesc = buildUniqueDatesDesc(workouts);
+  const totalCompletedWorkouts = workouts.length;
+
+  const firstDate =
+    uniqueDatesDesc.length > 0
+      ? new Date(uniqueDatesDesc[uniqueDatesDesc.length - 1])
+      : null;
+  const weeksSpanned = firstDate
+    ? Math.max(1, (Date.now() - firstDate.getTime()) / (7 * 86400000))
+    : null;
+
   return {
-    totalCompletedWorkouts: workouts.length,
-    currentStreak: computeCurrentStreak(workouts),
+    totalCompletedWorkouts,
+    currentStreak: computeCurrentStreak(uniqueDatesDesc),
+    longestStreak: computeLongestStreak(uniqueDatesDesc),
     actualWorkoutsThisWeek,
     actualWorkoutsLastWeek,
     plannedWorkoutsPerWeek: activeSplitWorkoutsPerWeek,
     latestWorkoutDate,
+    averageWorkoutsPerWeek: weeksSpanned !== null ? totalCompletedWorkouts / weeksSpanned : null,
+    completionRate:
+      activeSplitWorkoutsPerWeek != null && activeSplitWorkoutsPerWeek > 0
+        ? actualWorkoutsThisWeek / activeSplitWorkoutsPerWeek
+        : null,
   };
 }
 
@@ -240,7 +370,14 @@ function computeRecoveryMetrics(workouts: AnalyticsRawWorkout[]): RecoveryMetric
 // ─── Personal Records ─────────────────────────────────────────────────────────
 
 function computePersonalRecordMetrics(strength: StrengthMetrics): PersonalRecordMetrics {
-  return { topRecords: strength.exerciseBests.slice(0, 5) };
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const recentPRCandidates = strength.exerciseBests.filter(
+    ex => ex.bestSetDate !== null && ex.bestSetDate >= thirtyDaysAgo
+  );
+  return {
+    topRecords: strength.exerciseBests.slice(0, 5),
+    recentPRCandidates,
+  };
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

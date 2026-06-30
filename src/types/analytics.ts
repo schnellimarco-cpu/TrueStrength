@@ -45,6 +45,7 @@ export type ExerciseBest = {
   exerciseName: string;
   maxWeightKg: number;
   bestEstimated1RM: number | null;
+  bestSetDate: string | null; // YYYY-MM-DD when maxWeightKg was set
 };
 
 export type VolumeMetrics = {
@@ -54,25 +55,36 @@ export type VolumeMetrics = {
   currentMonthVolume: number;
   previousMonthVolume: number;
   volumeByMuscleGroup: MuscleGroupVolume[];
+  averageWorkoutVolume: number;
+  averageSetsPerWorkout: number;
+  averageRepsPerWorkout: number;
+  volumeByExercise: Array<{ exerciseName: string; totalVolume: number; setCount: number }>;
 };
 
 export type StrengthMetrics = {
   exerciseBests: ExerciseBest[]; // all exercises, sorted by maxWeightKg desc
+  averageIntensityKg: number | null; // mean weight across all completed sets; null if none
 };
 
 export type BodyweightMetrics = {
   currentEntry: BodyweightEntry | null;
   trend30DayDeltaKg: number | null;
   trend30DayLabel: string | null;
+  averageBodyweightKg: number | null;
+  allTimeChangeKg: number | null; // most recent minus oldest; null if < 2 entries
+  workoutDateWeightMap: Record<string, number>; // YYYY-MM-DD → closest bodyweight kg
 };
 
 export type ConsistencyMetrics = {
   totalCompletedWorkouts: number;
   currentStreak: number;
+  longestStreak: number;
   actualWorkoutsThisWeek: number;
   actualWorkoutsLastWeek: number;
   plannedWorkoutsPerWeek: number | null;
   latestWorkoutDate: string | null;
+  averageWorkoutsPerWeek: number | null; // totalWorkouts / weeks since first; null if no workouts
+  completionRate: number | null; // actualWorkoutsThisWeek / plannedWorkoutsPerWeek; null if no split
 };
 
 export type RecoveryMetrics = {
@@ -82,6 +94,7 @@ export type RecoveryMetrics = {
 
 export type PersonalRecordMetrics = {
   topRecords: ExerciseBest[]; // top 5 by maxWeightKg
+  recentPRCandidates: ExerciseBest[]; // bestSetDate within last 30 days
 };
 
 // ─── Layer 3: Insights ────────────────────────────────────────────────────────
@@ -105,10 +118,21 @@ export type AnalyticsInsight = {
   metricReference?: string;
 };
 
+// ─── Raw Data Summary ─────────────────────────────────────────────────────────
+
+export type RawDataSummary = {
+  workoutCount: number;
+  uniqueExerciseCount: number;
+  totalSets: number;
+  bodyweightEntryCount: number;
+  hasActiveSplit: boolean;
+};
+
 // ─── Analytics Snapshot ───────────────────────────────────────────────────────
 
 export type AnalyticsSnapshot = {
   generatedAt: string;
+  rawSummary: RawDataSummary;
   metrics: {
     volume: VolumeMetrics;
     strength: StrengthMetrics;

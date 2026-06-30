@@ -4,6 +4,33 @@ export function generateInsights(metrics: AnalyticsSnapshot['metrics']): Analyti
   const insights: AnalyticsInsight[] = [];
   const { volume, consistency, recovery, bodyweight, personalRecords } = metrics;
 
+  // Personal records: recent PRs (high priority — most actionable)
+  if (personalRecords.recentPRCandidates.length > 0) {
+    const top = personalRecords.recentPRCandidates[0];
+    insights.push({
+      id: 'pr-recent',
+      category: 'personal_record',
+      priority: 'high',
+      title: personalRecords.recentPRCandidates.length === 1
+        ? 'New personal record'
+        : `${personalRecords.recentPRCandidates.length} new personal records`,
+      description: `${top.exerciseName}: ${top.maxWeightKg} kg${top.bestEstimated1RM != null ? ` (est. 1RM ~${Math.round(top.bestEstimated1RM)} kg)` : ''}.`,
+      metricReference: 'personalRecords.recentPRCandidates',
+    });
+  }
+
+  // Recovery: days since last workout (high priority)
+  if (recovery.daysSinceLastWorkout !== null && recovery.daysSinceLastWorkout > 5) {
+    insights.push({
+      id: 'recovery-long-break',
+      category: 'recovery',
+      priority: 'high',
+      title: 'Extended rest period',
+      description: `It has been ${recovery.daysSinceLastWorkout} days since your last workout.`,
+      metricReference: 'recovery.daysSinceLastWorkout',
+    });
+  }
+
   // Volume: week-over-week
   if (volume.previousWeekVolume > 0) {
     const pct = ((volume.currentWeekVolume - volume.previousWeekVolume) / volume.previousWeekVolume) * 100;
@@ -40,15 +67,18 @@ export function generateInsights(metrics: AnalyticsSnapshot['metrics']): Analyti
     });
   }
 
-  // Recovery: days since last workout
-  if (recovery.daysSinceLastWorkout !== null && recovery.daysSinceLastWorkout > 5) {
+  // Consistency: improving week-over-week
+  if (
+    consistency.actualWorkoutsThisWeek > consistency.actualWorkoutsLastWeek &&
+    consistency.actualWorkoutsLastWeek > 0
+  ) {
     insights.push({
-      id: 'recovery-long-break',
-      category: 'recovery',
-      priority: 'high',
-      title: 'Extended rest period',
-      description: `It has been ${recovery.daysSinceLastWorkout} days since your last workout.`,
-      metricReference: 'recovery.daysSinceLastWorkout',
+      id: 'consistency-improving',
+      category: 'consistency',
+      priority: 'medium',
+      title: 'Consistency improving',
+      description: `${consistency.actualWorkoutsThisWeek} workouts this week vs ${consistency.actualWorkoutsLastWeek} last week.`,
+      metricReference: 'consistency.actualWorkoutsThisWeek',
     });
   }
 
@@ -66,8 +96,12 @@ export function generateInsights(metrics: AnalyticsSnapshot['metrics']): Analyti
     });
   }
 
-  // Bodyweight: trend
-  if (bodyweight.trend30DayLabel !== null && bodyweight.trend30DayDeltaKg !== null) {
+  // Bodyweight: trending (only when change >= 0.5 kg)
+  if (
+    bodyweight.trend30DayLabel !== null &&
+    bodyweight.trend30DayDeltaKg !== null &&
+    Math.abs(bodyweight.trend30DayDeltaKg) >= 0.5
+  ) {
     const gaining = bodyweight.trend30DayDeltaKg > 0;
     insights.push({
       id: 'bodyweight-trend',
@@ -79,16 +113,18 @@ export function generateInsights(metrics: AnalyticsSnapshot['metrics']): Analyti
     });
   }
 
-  // Personal records: has data
-  if (personalRecords.topRecords.length > 0) {
-    const top = personalRecords.topRecords[0];
+  // Bodyweight: stable (when change < 0.5 kg)
+  if (
+    bodyweight.trend30DayDeltaKg !== null &&
+    Math.abs(bodyweight.trend30DayDeltaKg) < 0.5
+  ) {
     insights.push({
-      id: 'pr-top-lift',
-      category: 'personal_record',
+      id: 'bodyweight-stable',
+      category: 'bodyweight',
       priority: 'low',
-      title: 'Strongest lift on record',
-      description: `Your top recorded lift is ${top.exerciseName} at ${top.maxWeightKg} kg.`,
-      metricReference: 'personalRecords.topRecords',
+      title: 'Bodyweight stable',
+      description: 'Your bodyweight has remained stable over the past 30 days.',
+      metricReference: 'bodyweight.trend30DayDeltaKg',
     });
   }
 

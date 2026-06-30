@@ -61,6 +61,15 @@ export default function AnalyticsDebugScreen() {
     },
   });
 
+  function Row({ label, value }: { label: string; value: string }) {
+    return (
+      <View style={styles.tableRow}>
+        <ThemedText style={styles.tableCell}>{label}</ThemedText>
+        <ThemedText style={styles.tableCellRight}>{value}</ThemedText>
+      </View>
+    );
+  }
+
   if (loading && !snapshot) {
     return (
       <ScreenContainer>
@@ -102,97 +111,144 @@ export default function AnalyticsDebugScreen() {
         </View>
       </Card>
 
+      {/* Raw Data Summary */}
+      <SectionHeader title="Raw Data Summary" />
+      <Card>
+        <Row label="Workouts" value={String(snapshot.rawSummary.workoutCount)} />
+        <Row label="Unique Exercises" value={String(snapshot.rawSummary.uniqueExerciseCount)} />
+        <Row label="Total Completed Sets" value={String(snapshot.rawSummary.totalSets)} />
+        <Row label="Bodyweight Entries" value={String(snapshot.rawSummary.bodyweightEntryCount)} />
+        <Row label="Active Split" value={snapshot.rawSummary.hasActiveSplit ? 'Yes' : 'No'} />
+      </Card>
+
       {/* Consistency */}
       <SectionHeader title="Consistency" />
       <Card>
-        {[
-          ['Total Workouts', String(consistency.totalCompletedWorkouts)],
-          ['Current Streak', `${consistency.currentStreak} days`],
-          ['Workouts This Week', String(consistency.actualWorkoutsThisWeek)],
-          ['Workouts Last Week', String(consistency.actualWorkoutsLastWeek)],
-          ['Planned / Week', consistency.plannedWorkoutsPerWeek != null ? String(consistency.plannedWorkoutsPerWeek) : '—'],
-          ['Latest Workout', consistency.latestWorkoutDate ?? '—'],
-        ].map(([label, val]) => (
-          <View key={label} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{label}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>{val}</ThemedText>
-          </View>
-        ))}
+        <Row label="Total Workouts" value={String(consistency.totalCompletedWorkouts)} />
+        <Row label="Current Streak" value={`${consistency.currentStreak} days`} />
+        <Row label="Longest Streak" value={`${consistency.longestStreak} days`} />
+        <Row label="Workouts This Week" value={String(consistency.actualWorkoutsThisWeek)} />
+        <Row label="Workouts Last Week" value={String(consistency.actualWorkoutsLastWeek)} />
+        <Row
+          label="Avg / Week"
+          value={consistency.averageWorkoutsPerWeek != null
+            ? consistency.averageWorkoutsPerWeek.toFixed(1)
+            : '—'}
+        />
+        <Row
+          label="Completion Rate"
+          value={consistency.completionRate != null
+            ? `${(consistency.completionRate * 100).toFixed(0)}%`
+            : '—'}
+        />
+        <Row
+          label="Planned / Week"
+          value={consistency.plannedWorkoutsPerWeek != null
+            ? String(consistency.plannedWorkoutsPerWeek)
+            : '—'}
+        />
+        <Row label="Latest Workout" value={consistency.latestWorkoutDate ?? '—'} />
       </Card>
 
       {/* Volume */}
       <SectionHeader title="Volume" />
       <Card>
-        {[
-          ['Total', `${volume.totalVolume.toFixed(0)} kg`],
-          ['This Week', `${volume.currentWeekVolume.toFixed(0)} kg`],
-          ['Last Week', `${volume.previousWeekVolume.toFixed(0)} kg`],
-          ['This Month', `${volume.currentMonthVolume.toFixed(0)} kg`],
-          ['Last Month', `${volume.previousMonthVolume.toFixed(0)} kg`],
-        ].map(([label, val]) => (
-          <View key={label} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{label}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>{val}</ThemedText>
-          </View>
-        ))}
+        <Row label="Total" value={`${volume.totalVolume.toFixed(0)} kg`} />
+        <Row label="Avg / Workout" value={`${volume.averageWorkoutVolume.toFixed(0)} kg`} />
+        <Row label="Avg Sets / Workout" value={volume.averageSetsPerWorkout.toFixed(1)} />
+        <Row label="Avg Reps / Workout" value={volume.averageRepsPerWorkout.toFixed(0)} />
+        <Row label="This Week" value={`${volume.currentWeekVolume.toFixed(0)} kg`} />
+        <Row label="Last Week" value={`${volume.previousWeekVolume.toFixed(0)} kg`} />
+        <Row label="This Month" value={`${volume.currentMonthVolume.toFixed(0)} kg`} />
+        <Row label="Last Month" value={`${volume.previousMonthVolume.toFixed(0)} kg`} />
         {volume.volumeByMuscleGroup.map(mg => (
-          <View key={mg.muscleGroup} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{mg.muscleGroup}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>
-              {mg.setCount} sets · {(mg.fraction * 100).toFixed(0)}%
-            </ThemedText>
-          </View>
+          <Row
+            key={mg.muscleGroup}
+            label={mg.muscleGroup}
+            value={`${mg.setCount} sets · ${(mg.fraction * 100).toFixed(0)}%`}
+          />
+        ))}
+      </Card>
+
+      {/* Top Exercises by Volume */}
+      <SectionHeader title="Top Exercises (Volume)" />
+      <Card>
+        {volume.volumeByExercise.length === 0 ? (
+          <ThemedText style={styles.value}>No data</ThemedText>
+        ) : volume.volumeByExercise.slice(0, 10).map(ex => (
+          <Row
+            key={ex.exerciseName}
+            label={ex.exerciseName}
+            value={`${ex.totalVolume.toFixed(0)} kg · ${ex.setCount} sets`}
+          />
         ))}
       </Card>
 
       {/* Strength */}
-      <SectionHeader title="Strength (All Bests)" />
+      <SectionHeader title="Strength" />
       <Card>
-        {strength.exerciseBests.length === 0 ? (
-          <ThemedText style={styles.value}>No data</ThemedText>
-        ) : strength.exerciseBests.map(ex => (
-          <View key={ex.exerciseName} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{ex.exerciseName}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>
-              {ex.maxWeightKg} kg{ex.bestEstimated1RM != null ? ` · 1RM ~${Math.round(ex.bestEstimated1RM)}` : ''}
-            </ThemedText>
-          </View>
+        <Row
+          label="Avg Intensity"
+          value={strength.averageIntensityKg != null
+            ? `${strength.averageIntensityKg.toFixed(1)} kg`
+            : '—'}
+        />
+        {strength.exerciseBests.map(ex => (
+          <Row
+            key={ex.exerciseName}
+            label={ex.exerciseName}
+            value={`${ex.maxWeightKg} kg${ex.bestEstimated1RM != null ? ` · 1RM ~${Math.round(ex.bestEstimated1RM)}` : ''}${ex.bestSetDate ? ` (${ex.bestSetDate})` : ''}`}
+          />
         ))}
       </Card>
 
       {/* Bodyweight */}
       <SectionHeader title="Bodyweight" />
       <Card>
-        {[
-          ['Current', bodyweight.currentEntry
+        <Row
+          label="Current"
+          value={bodyweight.currentEntry
             ? `${bodyweight.currentEntry.weightKg} ${bodyweight.currentEntry.unit}`
-            : '—'],
-          ['30d Delta', bodyweight.trend30DayDeltaKg != null
+            : '—'}
+        />
+        <Row
+          label="Average"
+          value={bodyweight.averageBodyweightKg != null
+            ? `${bodyweight.averageBodyweightKg.toFixed(1)} kg`
+            : '—'}
+        />
+        <Row
+          label="All-Time Change"
+          value={bodyweight.allTimeChangeKg != null
+            ? `${bodyweight.allTimeChangeKg > 0 ? '+' : ''}${bodyweight.allTimeChangeKg.toFixed(1)} kg`
+            : '—'}
+        />
+        <Row
+          label="30d Delta"
+          value={bodyweight.trend30DayDeltaKg != null
             ? `${bodyweight.trend30DayDeltaKg > 0 ? '+' : ''}${bodyweight.trend30DayDeltaKg.toFixed(1)} kg`
-            : '—'],
-          ['30d Label', bodyweight.trend30DayLabel ?? '—'],
-        ].map(([label, val]) => (
-          <View key={label} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{label}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>{val}</ThemedText>
-          </View>
-        ))}
+            : '—'}
+        />
+        <Row label="30d Label" value={bodyweight.trend30DayLabel ?? '—'} />
+        <Row
+          label="Workout Date Map"
+          value={`${Object.keys(bodyweight.workoutDateWeightMap).length} entries`}
+        />
       </Card>
 
       {/* Recovery */}
       <SectionHeader title="Recovery" />
       <Card>
-        <View style={styles.tableRow}>
-          <ThemedText style={styles.tableCell}>Days Since Last Workout</ThemedText>
-          <ThemedText style={styles.tableCellRight}>
-            {recovery.daysSinceLastWorkout != null ? `${recovery.daysSinceLastWorkout}d` : '—'}
-          </ThemedText>
-        </View>
+        <Row
+          label="Days Since Last Workout"
+          value={recovery.daysSinceLastWorkout != null ? `${recovery.daysSinceLastWorkout}d` : '—'}
+        />
         {recovery.muscleGroupRecovery.map(r => (
-          <View key={r.muscleGroup} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{r.muscleGroup}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>{r.daysSinceLastTrained}d ago</ThemedText>
-          </View>
+          <Row
+            key={r.muscleGroup}
+            label={r.muscleGroup}
+            value={`${r.daysSinceLastTrained}d ago`}
+          />
         ))}
       </Card>
 
@@ -202,12 +258,25 @@ export default function AnalyticsDebugScreen() {
         {personalRecords.topRecords.length === 0 ? (
           <ThemedText style={styles.value}>No data</ThemedText>
         ) : personalRecords.topRecords.map(pr => (
-          <View key={pr.exerciseName} style={styles.tableRow}>
-            <ThemedText style={styles.tableCell}>{pr.exerciseName}</ThemedText>
-            <ThemedText style={styles.tableCellRight}>
-              {pr.maxWeightKg} kg{pr.bestEstimated1RM != null ? ` · 1RM ~${Math.round(pr.bestEstimated1RM)}` : ''}
-            </ThemedText>
-          </View>
+          <Row
+            key={pr.exerciseName}
+            label={pr.exerciseName}
+            value={`${pr.maxWeightKg} kg${pr.bestEstimated1RM != null ? ` · 1RM ~${Math.round(pr.bestEstimated1RM)}` : ''}`}
+          />
+        ))}
+      </Card>
+
+      {/* Recent PRs */}
+      <SectionHeader title={`Recent PRs (${personalRecords.recentPRCandidates.length})`} />
+      <Card>
+        {personalRecords.recentPRCandidates.length === 0 ? (
+          <ThemedText style={styles.value}>No PRs in last 30 days</ThemedText>
+        ) : personalRecords.recentPRCandidates.map(pr => (
+          <Row
+            key={pr.exerciseName}
+            label={pr.exerciseName}
+            value={`${pr.maxWeightKg} kg · ${pr.bestSetDate ?? '—'}`}
+          />
         ))}
       </Card>
 
